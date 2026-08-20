@@ -5,15 +5,15 @@ type Suit = "♠" | "♥" | "♦" | "♣";
 type Rank = "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K" | "A";
 type Phase = "ready" | "action" | "result";
 interface Card { suit: Suit; rank: Rank; }
-interface Opponent { name: string; role: string; hand: Card[]; status: string; folded: boolean; }
+interface Opponent { name: string; role: string; hand: Card[]; status: string; folded: boolean; aggression: number; caution: number; }
 
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 const RANKS: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 const VALUES: Record<Rank, number> = { "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13, A: 14 };
 const PERSONAS = [
-  { name: "MORGAN", role: "THE SHARK" },
-  { name: "ELI", role: "THE CALCULATOR" },
-  { name: "NOVA", role: "THE WILDCARD" },
+  { name: "MORGAN", role: "THE SHARK", aggression: 0.82, caution: 0.18 },
+  { name: "ELI", role: "THE CALCULATOR", aggression: 0.48, caution: 0.72 },
+  { name: "NOVA", role: "THE WILDCARD", aggression: 0.68, caution: 0.34 },
 ];
 
 function makeDeck(): Card[] { return SUITS.flatMap(suit => RANKS.map(rank => ({ suit, rank }))).sort(() => Math.random() - 0.5); }
@@ -23,6 +23,24 @@ function score(hand: Card[]): number {
   hand.forEach(card => counts.set(VALUES[card.rank], (counts.get(VALUES[card.rank]) ?? 0) + 1));
   const groups = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
   return groups.reduce((total, [value, count], index) => total + value * count * (7 - index), 0);
+}
+function handStrength(hand: Card[], board: Card[]): number {
+  const cards = [...hand, ...board];
+  const counts = new Map<number, number>();
+  cards.forEach(card => counts.set(VALUES[card.rank], (counts.get(VALUES[card.rank]) ?? 0) + 1));
+  const pairs = [...counts.values()].sort((a, b) => b - a);
+  const flush = SUITS.some(suit => cards.filter(card => card.suit === suit).length >= 5);
+  const ranks = [...new Set(cards.map(card => VALUES[card.rank]))].sort((a, b) => a - b);
+  const straight = ranks.some((rank, index) => rank >= 5 && ranks.slice(Math.max(0, index - 4), index + 1).length >= 5) || [14, 2, 3, 4, 5].every(rank => ranks.includes(rank));
+  if (flush && straight) return 0.98;
+  if (pairs[0] >= 4) return 0.94;
+  if (pairs[0] >= 3 && pairs[1] >= 2) return 0.88;
+  if (flush || straight) return 0.75;
+  if (pairs[0] >= 3) return 0.68;
+  if (pairs[0] >= 2 && pairs[1] >= 2) return 0.58;
+  if (pairs[0] >= 2) return 0.45;
+  const highCards = hand.map(card => VALUES[card.rank]).sort((a, b) => b - a);
+  return Math.min(0.4, 0.18 + (highCards[0] ?? 2) / 100 + (highCards[1] ?? 2) / 200);
 }
 function handName(hand: Card[]) {
   const counts = new Map<Rank, number>();
@@ -70,7 +88,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
     setPlayerHand(deck.slice(0, 2));
     setDealerHand(deck.slice(2, 4));
     setCommunity(deck.slice(4, 9));
-    setOpponents(PERSONAS.map((persona, index) => ({ ...persona, hand: deck.slice(9 + index * 2, 11 + index * 2), status: index === 0 ? "thinking" : "콜", folded: false })));
+    setOpponents(PERSONAS.map((persona, index) => ({ ...persona, hand: deck.slice(9 + index * 2, 11 + index * 2), status: "thinking", folded: false })));
     setStreet(0); setPot(bet * 2); setPhase("action"); setResult(null);
     setLogs([`새 핸드가 시작되었습니다. 블라인드 10 / 20.`, `당신이 ${bet.toLocaleString()} 칩을 베팅했습니다.`]);
     setMessage("IRIS: 프리플랍입니다. 당신의 차례입니다.");
@@ -84,25 +102,42 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
   function advance(action: "check" | "raise") {
     if (phase !== "action") return;
     if (action === "raise") { setPot(previous => previous + bet); addLog(`당신이 ${bet.toLocaleString()} 칩을 레이즈했습니다.`); }
+    const nextStreet = street + 1;
+    const nextBoard = nextStreet === 0 ? [] : nextStreet === 1 ? community.slice(0, 3) : nextStreet === 2 ? community.slice(0, 4) : community;
+    const nextOpponents = opponents.map(opponent => {
+      const strength = handStrength(opponent.hand, nextBoard);
+      const pressure = action === "raise" ? 0.1 : 0;
+      const folds = strength < opponent.caution * 0.42 + pressure && Math.random() < 0.6;
+      const raises = !folds && strength > 0.52 && Math.random() < opponent.aggression;
+      return { ...opponent, folded: folds, status: folds ? "폴드" : raises ? "레이즈" : strength > 0.3 ? "콜" : "체크" };
+    });
+    setOpponents(nextOpponents);
+    const activeOpponents = nextOpponents.filter(opponent => !opponent.folded);
+    const aiContribution = activeOpponents.filter(opponent => opponent.status === "콜" || opponent.status === "레이즈").length * bet;
+    if (aiContribution > 0) setPot(previous => previous + aiContribution);
+    addLog(activeOpponents.length ? `${activeOpponents.map(opponent => `${opponent.name} ${opponent.status}`).join(", ")}.` : "모든 AI가 폴드했습니다.");
+    if (activeOpponents.length === 0) {
+      setPhase("result"); setResult("win"); setMessage(`IRIS: 모두 폴드했습니다. +${bet.toLocaleString()} 카지노 칩`); onWin(bet); return;
+    }
     if (street < 3) {
-      const nextStreet = street + 1;
       setStreet(nextStreet);
-      setOpponents(previous => previous.map((opponent, index) => ({ ...opponent, status: index === nextStreet % 3 ? "thinking" : action === "raise" ? "콜" : "체크" })));
       setMessage(`IRIS: ${["플랍", "턴", "리버"][nextStreet - 1]} 카드가 공개되었습니다.`);
       if (nextStreet === 3) setLogs(previous => [`리버까지 진행합니다. 마지막 액션을 선택하세요.`, ...previous].slice(0, 8));
     } else {
-      showdown();
+      showdown(nextOpponents);
     }
   }
 
-  function showdown() {
+  function showdown(currentOpponents = opponents) {
     const playerScore = score([...playerHand, ...community]);
-    const dealerScore = score([...dealerHand, ...community]);
+    const activeOpponents = currentOpponents.filter(opponent => !opponent.folded);
+    const bestOpponent = activeOpponents.reduce((best, opponent) => score([...opponent.hand, ...community]) > score([...best.hand, ...community]) ? opponent : best, activeOpponents[0]);
+    const dealerScore = bestOpponent ? score([...bestOpponent.hand, ...community]) : 0;
     const total = pot + bet;
     setPhase("result");
-    setOpponents(previous => previous.map(opponent => ({ ...opponent, status: "쇼다운" })));
+    setOpponents(previous => previous.map(opponent => ({ ...opponent, status: opponent.folded ? "폴드" : "쇼다운" })));
     if (playerScore > dealerScore) { setResult("win"); setMessage(`IRIS: ${handName([...playerHand, ...community])}! 승리했습니다. +${bet.toLocaleString()} 카지노 칩`); onWin(bet); }
-    else if (playerScore < dealerScore) { setResult("lose"); setMessage(`IRIS: 딜러의 ${handName([...dealerHand, ...community])} 승리. -${bet.toLocaleString()} 카지노 칩`); onLose(bet); }
+    else if (playerScore < dealerScore) { setResult("lose"); setMessage(`IRIS: ${bestOpponent?.name ?? "딜러"}의 ${handName([...(bestOpponent?.hand ?? dealerHand), ...community])} 승리. -${bet.toLocaleString()} 카지노 칩`); onLose(bet); }
     else { setResult("push"); setMessage(`IRIS: 무승부입니다. ${total.toLocaleString()} 칩을 반환합니다.`); }
   }
 
@@ -120,7 +155,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
 
     <div className="rounded-[50px] sm:rounded-[100px] p-3 sm:p-6" style={{ background: "#24160e", boxShadow: "0 20px 40px #0008, inset 0 0 0 2px #150d07, inset 0 0 0 3px #e6c85a" }}>
       <div className="rounded-[42px] sm:rounded-[82px] p-3 sm:p-6 flex flex-col gap-3 min-h-[430px]" style={{ background: "radial-gradient(ellipse at 50% 30%, #163d2e, #0a2019 75%)", boxShadow: "inset 0 0 60px #0009" }}>
-        <div className="flex justify-around gap-2 flex-wrap">{opponents.map(opponent => <Seat key={opponent.name} {...opponent} />)}</div>
+        <div className="flex justify-around gap-2 flex-wrap">{opponents.map(opponent => <Seat key={opponent.name} {...opponent} showCards={phase === "result"} />)}</div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[150px]"><div className="text-[10px] tracking-[3px]" style={{ color: "#9fa89c" }}>{stage}</div><div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center min-h-20">{visibleCommunity.map((card, index) => <CardView key={index} card={card} large />)}{Array.from({ length: 5 - visibleCommunity.length }).map((_, index) => <CardView key={`empty-${index}`} />)}</div><div className="px-4 py-1 rounded-full text-sm font-bold" style={{ background: "#0006", border: "1px solid #c9a22766", color: "#e6c85a" }}>POT {pot.toLocaleString()}</div></div>
         <div className="flex justify-center"><Seat name="YOU" role="PLAYER" hand={playerHand} status={phase === "action" ? "your turn" : phase === "result" ? (result ?? "ready") : "waiting"} human showCards /></div>
       </div>
