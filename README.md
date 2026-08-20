@@ -23,12 +23,17 @@ npm run preview
 ## GitHub 업로드
 
 ```bash
-git init
 git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-git push -u origin main
+git commit -m "Update project"
+git push
 ```
 
 `node_modules`, `dist`, `.figma`, 환경 변수 파일은 `.gitignore`에 의해 업로드되지 않습니다.
+
+## GitHub Pages
+
+`main` 브랜치에 push하면 GitHub Actions가 자동으로 빌드하고 배포합니다.
+
+배포 주소: https://kjw12161-wq.github.io/ahffk/
+
+처음 한 번은 GitHub 저장소의 `Settings > Pages`에서 `Source`를 `GitHub Actions`로 선택합니다.
