@@ -5,7 +5,7 @@ import DiceGame from "./games/DiceGame";
 import SlotMachine from "./games/SlotMachine";
 import Blackjack from "./games/Blackjack";
 
-type GameId = "lobby" | "roulette" | "shell" | "dice" | "slots" | "blackjack";
+type GameId = "lobby" | "roulette" | "shell" | "dice" | "slots" | "blackjack" | "poker";
 
 const GAMES = [
   { id: "roulette" as GameId, name: "룰렛", icon: "🎡", desc: "번호와 색상에 베팅하라", color: "#8b1a1a" },
@@ -13,6 +13,7 @@ const GAMES = [
   { id: "dice" as GameId, name: "주사위", icon: "🎲", desc: "숫자를 맞춰라", color: "#1a3a6b" },
   { id: "slots" as GameId, name: "슬롯머신", icon: "🎰", desc: "행운의 심볼을 맞춰라", color: "#5a1a7a" },
   { id: "blackjack" as GameId, name: "블랙잭", icon: "🃏", desc: "21에 가장 가까운 자가 승리", color: "#1a4a3a" },
+  { id: "poker" as GameId, name: "AI 딜러 포커", icon: "♣", desc: "AI 딜러와 노리밋 홀덤", color: "#6b1e2b" },
 ];
 
 function WinPopup({ amount, onClose }: { amount: number; onClose: () => void }) {
@@ -200,6 +201,14 @@ export default function App() {
               )}
               {currentGame === "blackjack" && (
                 <Blackjack balance={balance} onWin={handleWin} onLose={handleLose} />
+              )}
+              {currentGame === "poker" && (
+                <iframe
+                  title="AI 딜러 포커"
+                  src={`${import.meta.env.BASE_URL}ai-dealer-poker.html`}
+                  className="w-full border-0"
+                  style={{ height: "min(820px, calc(100vh - 150px))", minHeight: "620px" }}
+                />
               )}
             </div>
           </div>
