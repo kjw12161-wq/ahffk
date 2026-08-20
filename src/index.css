@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: #0a0f0a;
+  --color-foreground: #f0ead6;
+  --color-card: #111a11;
+  --color-card-foreground: #f0ead6;
+  --color-primary: #c9a84c;
+  --color-primary-foreground: #0a0f0a;
+  --color-secondary: #1a2e1a;
+  --color-secondary-foreground: #c9a84c;
+  --color-muted: #1f2e1f;
+  --color-muted-foreground: #8a9e8a;
+  --color-accent: #e8b84b;
+  --color-accent-foreground: #0a0f0a;
+  --color-border: #2a3f2a;
+  --color-ring: #c9a84c;
+  --radius: 0.5rem;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0a0f0a;
+  color: #f0ead6;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a3f2a; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #c9a84c55; }
+
+/* Felt texture overlay */
+.felt-texture {
+  background-image:
+    radial-gradient(ellipse at 20% 50%, #0d1f0d 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, #0a1a0a 0%, transparent 50%),
+    linear-gradient(135deg, #0d1f0d 0%, #0a0f0a 50%, #0d1f0d 100%);
+}
+
+/* Gold glow */
+.gold-glow {
+  box-shadow: 0 0 20px #c9a84c44, 0 0 40px #c9a84c22;
+}
+
+.gold-text-glow {
+  text-shadow: 0 0 20px #c9a84c88;
+}
+
+/* Chip styles */
+.chip {
+  border-radius: 50%;
+  border: 3px dashed currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.chip:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px #0008;
+}
+.chip:active { transform: scale(0.95); }
+
+/* Roulette wheel spin animation */
+@keyframes spin-wheel {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(var(--spin-deg, 1800deg)); }
+}
+
+@keyframes bounce-ball {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-6px) rotate(-5deg); }
+  40% { transform: translateX(6px) rotate(5deg); }
+  60% { transform: translateX(-4px) rotate(-3deg); }
+  80% { transform: translateX(4px) rotate(3deg); }
+}
+
+@keyframes slot-spin {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-300%); }
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: scale(0.7) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes coin-fall {
+  from { opacity: 1; transform: translateY(-20px); }
+  to { opacity: 0; transform: translateY(30px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px #c9a84c44; }
+  50% { box-shadow: 0 0 24px #c9a84c99, 0 0 48px #c9a84c33; }
+}
+
+@keyframes card-flip {
+  from { transform: rotateY(90deg); opacity: 0; }
+  to { transform: rotateY(0deg); opacity: 1; }
+}
+
+.animate-reveal { animation: reveal 0.4s ease forwards; }
+.animate-shake { animation: shake 0.6s ease; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-card-flip { animation: card-flip 0.35s ease forwards; }
