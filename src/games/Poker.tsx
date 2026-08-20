@@ -70,6 +70,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
   const [phase, setPhase] = useState<Phase>("ready");
   const [street, setStreet] = useState(0);
   const [bet, setBet] = useState(50);
+  const [wager, setWager] = useState(0);
   const [pot, setPot] = useState(0);
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
   const [dealerHand, setDealerHand] = useState<Card[]>([]);
@@ -89,19 +90,24 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
     setDealerHand(deck.slice(2, 4));
     setCommunity(deck.slice(4, 9));
     setOpponents(PERSONAS.map((persona, index) => ({ ...persona, hand: deck.slice(9 + index * 2, 11 + index * 2), status: "thinking", folded: false })));
-    setStreet(0); setPot(bet * 2); setPhase("action"); setResult(null);
+    setStreet(0); setWager(bet); setPot(bet * 2); setPhase("action"); setResult(null);
     setLogs([`새 핸드가 시작되었습니다. 블라인드 10 / 20.`, `당신이 ${bet.toLocaleString()} 칩을 베팅했습니다.`]);
     setMessage("IRIS: 프리플랍입니다. 당신의 차례입니다.");
   }
 
   function fold() {
     if (phase !== "action") return;
-    setPhase("result"); setResult("lose"); setMessage(`IRIS: 폴드했습니다. -${bet.toLocaleString()} 카지노 칩`); onLose(bet);
+    setPhase("result"); setResult("lose"); setMessage(`IRIS: 폴드했습니다. -${wager.toLocaleString()} 카지노 칩`); onLose(wager);
   }
 
   function advance(action: "check" | "raise") {
     if (phase !== "action") return;
-    if (action === "raise") { setPot(previous => previous + bet); addLog(`당신이 ${bet.toLocaleString()} 칩을 레이즈했습니다.`); }
+    if (action === "raise") {
+      if (wager + bet > balance) { setMessage("IRIS: 보유 카지노 칩을 초과하는 레이즈입니다."); return; }
+      setWager(previous => previous + bet);
+      setPot(previous => previous + bet);
+      addLog(`당신이 ${bet.toLocaleString()} 칩을 레이즈했습니다. 총 베팅 ${ (wager + bet).toLocaleString() }.`);
+    }
     const nextStreet = street + 1;
     const nextBoard = nextStreet === 0 ? [] : nextStreet === 1 ? community.slice(0, 3) : nextStreet === 2 ? community.slice(0, 4) : community;
     const nextOpponents = opponents.map(opponent => {
@@ -117,7 +123,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
     if (aiContribution > 0) setPot(previous => previous + aiContribution);
     addLog(activeOpponents.length ? `${activeOpponents.map(opponent => `${opponent.name} ${opponent.status}`).join(", ")}.` : "모든 AI가 폴드했습니다.");
     if (activeOpponents.length === 0) {
-      setPhase("result"); setResult("win"); setMessage(`IRIS: 모두 폴드했습니다. +${bet.toLocaleString()} 카지노 칩`); onWin(bet); return;
+      setPhase("result"); setResult("win"); setMessage(`IRIS: 모두 폴드했습니다. +${wager.toLocaleString()} 카지노 칩`); onWin(wager); return;
     }
     if (street < 3) {
       setStreet(nextStreet);
@@ -136,12 +142,12 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
     const total = pot + bet;
     setPhase("result");
     setOpponents(previous => previous.map(opponent => ({ ...opponent, status: opponent.folded ? "폴드" : "쇼다운" })));
-    if (playerScore > dealerScore) { setResult("win"); setMessage(`IRIS: ${handName([...playerHand, ...community])}! 승리했습니다. +${bet.toLocaleString()} 카지노 칩`); onWin(bet); }
-    else if (playerScore < dealerScore) { setResult("lose"); setMessage(`IRIS: ${bestOpponent?.name ?? "딜러"}의 ${handName([...(bestOpponent?.hand ?? dealerHand), ...community])} 승리. -${bet.toLocaleString()} 카지노 칩`); onLose(bet); }
+    if (playerScore > dealerScore) { setResult("win"); setMessage(`IRIS: ${handName([...playerHand, ...community])}! 승리했습니다. +${wager.toLocaleString()} 카지노 칩`); onWin(wager); }
+    else if (playerScore < dealerScore) { setResult("lose"); setMessage(`IRIS: ${bestOpponent?.name ?? "딜러"}의 ${handName([...(bestOpponent?.hand ?? dealerHand), ...community])} 승리. -${wager.toLocaleString()} 카지노 칩`); onLose(wager); }
     else { setResult("push"); setMessage(`IRIS: 무승부입니다. ${total.toLocaleString()} 칩을 반환합니다.`); }
   }
 
-  function reset() { setPhase("ready"); setStreet(0); setPot(0); setPlayerHand([]); setDealerHand([]); setCommunity([]); setOpponents([]); setResult(null); setMessage("IRIS: 자리에 앉으세요. 카지노 칩으로 게임을 시작합니다."); }
+  function reset() { setPhase("ready"); setStreet(0); setWager(0); setPot(0); setPlayerHand([]); setDealerHand([]); setCommunity([]); setOpponents([]); setResult(null); setMessage("IRIS: 자리에 앉으세요. 카지노 칩으로 게임을 시작합니다."); }
   const stage = street === 0 ? "PRE-FLOP" : street === 1 ? "FLOP" : street === 2 ? "TURN" : "RIVER";
   const visibleCommunity = street === 0 ? [] : street === 1 ? community.slice(0, 3) : street === 2 ? community.slice(0, 4) : community;
 
@@ -163,8 +169,8 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
 
     <div className={`text-center rounded-lg py-3 px-4 text-sm font-semibold ${result === "win" ? "bg-yellow-900/40 text-yellow-300" : result === "lose" ? "bg-red-900/30 text-red-300" : result === "push" ? "bg-blue-900/30 text-blue-300" : "text-gray-300"}`}>{message}</div>
     {phase === "ready" && <div className="flex flex-wrap justify-center items-center gap-3"><label className="flex items-center gap-2 text-sm" style={{ color: "#9fa89c" }}>베팅 <input type="number" min="10" max={Math.max(10, balance)} step="10" value={bet} onChange={event => setBet(Math.max(10, Math.min(balance || 10, Number(event.target.value) || 10)))} className="w-24 rounded-lg px-3 py-2 text-center" style={{ background: "#24160e", color: "#e6c85a", border: "1px solid #3a2416" }} /></label><button onClick={deal} className="px-6 py-3 rounded-lg font-bold" style={{ background: "linear-gradient(#e6c85a, #c9a227)", color: "#241804", boxShadow: "0 4px 16px #c9a84c44" }}>게임 시작</button></div>}
-    {phase === "action" && <div className="flex flex-wrap justify-center gap-2"><button onClick={fold} className="px-5 py-3 rounded-lg font-semibold" style={{ background: "#2a3630", color: "#efe7d6" }}>폴드</button><button onClick={() => advance("check")} className="px-5 py-3 rounded-lg font-semibold" style={{ background: "#2a3630", color: "#efe7d6" }}>{street === 3 ? "쇼다운" : "체크 / 콜"}</button><button onClick={() => advance("raise")} className="px-5 py-3 rounded-lg font-bold" style={{ background: "linear-gradient(#e6c85a, #c9a227)", color: "#241804" }}>레이즈 +{bet}</button></div>}
+    {phase === "action" && <div className="flex flex-wrap justify-center gap-2"><button onClick={fold} className="px-5 py-3 rounded-lg font-semibold" style={{ background: "#2a3630", color: "#efe7d6" }}>폴드</button><button onClick={() => advance("check")} className="px-5 py-3 rounded-lg font-semibold" style={{ background: "#2a3630", color: "#efe7d6" }}>{street === 3 ? "쇼다운" : "체크 / 콜"}</button><button onClick={() => advance("raise")} disabled={wager + bet > balance} className="px-5 py-3 rounded-lg font-bold disabled:opacity-40" style={{ background: "linear-gradient(#e6c85a, #c9a227)", color: "#241804" }}>레이즈 +{bet} <span className="text-xs opacity-70">(총 { (wager + bet).toLocaleString() })</span></button></div>}
     {phase === "result" && <button onClick={reset} className="mx-auto px-6 py-3 rounded-lg font-bold" style={{ background: "linear-gradient(#e6c85a, #c9a227)", color: "#241804" }}>다음 핸드</button>}
-    <div className="text-center text-xs" style={{ color: "#9fa89c" }}>보유 카지노 칩 <b style={{ color: "#e6c85a" }}>{balance.toLocaleString()}</b> · 현재 팟 {pot.toLocaleString()}</div>
+    <div className="text-center text-xs" style={{ color: "#9fa89c" }}>보유 카지노 칩 <b style={{ color: "#e6c85a" }}>{balance.toLocaleString()}</b> · 총 베팅 {wager.toLocaleString()} · 현재 팟 {pot.toLocaleString()}</div>
   </div>;
 }
