@@ -139,7 +139,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
     if (aiContribution > 0) setPot(previous => previous + aiContribution);
     addLog(activeOpponents.length ? `${activeOpponents.map(opponent => `${opponent.name} ${opponent.status}`).join(", ")}.` : "모든 AI가 폴드했습니다.");
     if (activeOpponents.length === 0) {
-      setPhase("result"); setResult("win"); setMessage(`IRIS: 모두 폴드했습니다. +${wager.toLocaleString()} 카지노 칩`); onWin(wager); return;
+      setPhase("result"); setPot(0); setResult("win"); setMessage(`IRIS: 모두 폴드했습니다. +${wager.toLocaleString()} 카지노 칩`); onWin(wager); return;
     }
     if (street < 3) {
       setStreet(nextStreet);
@@ -179,7 +179,7 @@ export default function Poker({ balance, onWin, onLose }: PokerProps) {
 
     <div className="rounded-[50px] sm:rounded-[100px] p-3 sm:p-6" style={{ background: "#24160e", boxShadow: "0 20px 40px #0008, inset 0 0 0 2px #150d07, inset 0 0 0 3px #e6c85a" }}>
       <div className="rounded-[42px] sm:rounded-[82px] p-3 sm:p-6 flex flex-col gap-3 min-h-[430px]" style={{ background: "radial-gradient(ellipse at 50% 30%, #163d2e, #0a2019 75%)", boxShadow: "inset 0 0 60px #0009" }}>
-        <div className="flex justify-around gap-2 flex-wrap">{opponents.map(opponent => <Seat key={opponent.name} {...opponent} showCards={phase === "result"} />)}</div>
+        <div className="flex justify-around gap-2 flex-wrap">{opponents.map(opponent => <Seat key={opponent.name} {...opponent} showCards={phase === "result" && !opponent.folded} />)}</div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[150px]"><div className="text-[10px] tracking-[3px]" style={{ color: "#9fa89c" }}>{stage}</div><div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center min-h-20">{visibleCommunity.map((card, index) => <CardView key={index} card={card} large />)}{Array.from({ length: 5 - visibleCommunity.length }).map((_, index) => <CardView key={`empty-${index}`} />)}</div><div className="px-4 py-1 rounded-full text-sm font-bold" style={{ background: "#0006", border: "1px solid #c9a22766", color: "#e6c85a" }}>POT {pot.toLocaleString()}</div></div>
         <div className="flex flex-col items-center gap-2"><Seat name="YOU" role="PLAYER" hand={playerHand} status={phase === "action" ? "your turn" : phase === "result" ? (result ?? "ready") : "waiting"} human showCards />{equity !== null && phase !== "result" && <div className={`text-xs px-3 py-1 rounded-full ${equity >= 0.6 ? "text-green-300 bg-green-900/30" : equity >= 0.4 ? "text-yellow-200 bg-yellow-900/30" : "text-red-300 bg-red-900/30"}`}>현재 승률 약 {Math.round(equity * 100)}%</div>}</div>
       </div>
