@@ -4,6 +4,7 @@ import ShellGame from "./games/ShellGame";
 import DiceGame from "./games/DiceGame";
 import SlotMachine from "./games/SlotMachine";
 import Blackjack from "./games/Blackjack";
+import Poker from "./games/Poker";
 
 type GameId = "lobby" | "roulette" | "shell" | "dice" | "slots" | "blackjack" | "poker";
 
@@ -203,12 +204,7 @@ export default function App() {
                 <Blackjack balance={balance} onWin={handleWin} onLose={handleLose} />
               )}
               {currentGame === "poker" && (
-                <iframe
-                  title="AI 딜러 포커"
-                  src={`${import.meta.env.BASE_URL}ai-dealer-poker.html`}
-                  className="w-full border-0"
-                  style={{ height: "clamp(720px, calc(100vh - 120px), 980px)" }}
-                />
+                <Poker balance={balance} onWin={handleWin} onLose={handleLose} />
               )}
             </div>
           </div>
