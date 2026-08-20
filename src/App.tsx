@@ -93,7 +93,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pb-24">
+      <div className={`${currentGame === "poker" ? "max-w-6xl" : "max-w-lg"} mx-auto w-full px-4 pb-24`}>
         {currentGame === "lobby" ? (
           /* Lobby */
           <div className="pt-6">
@@ -207,7 +207,7 @@ export default function App() {
                   title="AI 딜러 포커"
                   src={`${import.meta.env.BASE_URL}ai-dealer-poker.html`}
                   className="w-full border-0"
-                  style={{ height: "min(820px, calc(100vh - 150px))", minHeight: "620px" }}
+                  style={{ height: "clamp(720px, calc(100vh - 120px), 980px)" }}
                 />
               )}
             </div>
