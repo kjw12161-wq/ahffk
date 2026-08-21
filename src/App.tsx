@@ -214,10 +214,10 @@ export default function App() {
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-40"
         style={{background: "rgba(10,15,10,0.97)", borderTop: "1px solid #2a3f2a", backdropFilter: "blur(12px)"}}>
-        <div className="max-w-lg mx-auto flex items-center justify-around py-2 px-2">
+        <div className="max-w-lg mx-auto flex items-center justify-start sm:justify-around gap-1 overflow-x-auto py-2 px-2">
           <button
             onClick={() => setCurrentGame("lobby")}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+            className="flex shrink-0 flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
             style={{
               color: currentGame === "lobby" ? "#c9a84c" : "#8a9e8a",
               background: currentGame === "lobby" ? "#1a2e1a" : "transparent"
@@ -229,7 +229,7 @@ export default function App() {
             <button
               key={game.id}
               onClick={() => setCurrentGame(game.id)}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+              className="flex shrink-0 flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
               style={{
                 color: currentGame === game.id ? "#c9a84c" : "#8a9e8a",
                 background: currentGame === game.id ? "#1a2e1a" : "transparent"

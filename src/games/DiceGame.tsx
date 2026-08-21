@@ -42,6 +42,7 @@ export default function DiceGame({ balance, onWin, onLose }: DiceGameProps) {
   const [message, setMessage] = useState("");
 
   function roll() {
+    if (rolling) return;
     if (bet > balance) { setMessage("칩이 부족합니다!"); return; }
     setRolling(true);
     setResult(null);
